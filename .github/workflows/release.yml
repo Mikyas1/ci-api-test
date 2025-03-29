@@ -52,9 +52,13 @@ jobs:
         env:
           PAT: ${{ secrets.GH_PAT }} # Use PAT authentication
         run: |
+          git config --global user.name "$(git log -n 1 --pretty=format:'%an')"
+          git config --global user.email "$(git log -n 1 --pretty=format:'%ae')"
+
           git add VERSION
           git commit -m "ci: bump version to ${{ env.VERSION }}"
 
+          # Create the tag
           git tag ${{ env.VERSION }}
 
           # Authenticate using PAT
