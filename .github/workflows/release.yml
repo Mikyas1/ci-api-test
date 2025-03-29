@@ -52,8 +52,10 @@ jobs:
         env:
           PAT: ${{ secrets.GH_PAT }}
         run: |
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
           # Authenticate with PAT to push
-          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
+          git remote set-url origin https://x-access-token:${{ env.PAT }}@github.com/${{ github.repository }}.git
           git push origin ${{ env.VERSION }}
 
           git add VERSION
