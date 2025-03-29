@@ -86,14 +86,14 @@ func main() {
 		)
 	})
 
-	app.Get("/new-api", func(ctx *fiber.Ctx) error {
-		return ctx.JSON(
-			fiber.Map{
-				"server":   fmt.Sprintf("Server-%d", randomNumber),
-				"boss-man": cfg.Server.AppEnv,
-			},
-		)
-	})
+	// app.Get("/new-api", func(ctx *fiber.Ctx) error {
+	// 	return ctx.JSON(
+	// 		fiber.Map{
+	// 			"server":   fmt.Sprintf("Server-%d", randomNumber),
+	// 			"boss-man": cfg.Server.AppEnv,
+	// 		},
+	// 	)
+	// })
 
 	PORT := flag.String("PORT", cfg.Server.Port, "server port")
 	flag.Parse()
