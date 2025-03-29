@@ -3,6 +3,7 @@ categories:
     labels:
       - "feature"
       - "enhancement"
+      - "feat"
   - title: "🐛 Fixes"
     labels:
       - "bugfix"
