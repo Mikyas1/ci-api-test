@@ -50,16 +50,19 @@ jobs:
 
       - name: Commit and tag new version
         env:
-          PAT: ${{ secrets.GH_PAT }}
+          PAT: ${{ secrets.GH_PAT }} # Use PAT authentication
         run: |
-
-          # Authenticate with PAT to push
-          git remote set-url origin https://x-access-token:${{ env.PAT }}@github.com/${{ github.repository }}.git
-          git push origin ${{ env.VERSION }}
-
           git add VERSION
           git commit -m "ci: bump version to ${{ env.VERSION }}"
+
           git tag ${{ env.VERSION }}
+
+          # Authenticate using PAT
+          git remote set-url origin https://x-access-token:${{ env.PAT }}@github.com/${{ github.repository }}.git
+
+          # Push the commit and the tag explicitly
+          git push origin main  # Change 'main' to your default branch if different
+          git push origin ${{ env.VERSION }}  # Push the tag
 
       - name: Publish Release Notes
         uses: release-drafter/release-drafter@v5
