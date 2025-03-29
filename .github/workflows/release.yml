@@ -27,7 +27,7 @@ jobs:
           git config --global user.email "actions@github.com"
 
       - name: Extract latest version
-        run: echo VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0") >> $GITHUB_ENV
+        run: echo VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0") >> $GITHUB_ENV
 
       - name: Bump version
         run: |
@@ -49,16 +49,11 @@ jobs:
           echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Commit and tag new version
-        env:
-          PAT: ${{ secrets.GH_PAT }}
         run: |
 
           git add VERSION
           git commit -m "ci: bump version to ${{ env.VERSION }}"
           git tag ${{ env.VERSION }}
-
-          # Authenticate with PAT to push
-          git remote set-url origin https://x-access-token:${{ env.PAT }}@github.com/${{ github.repository }}.git
           git push origin ${{ env.VERSION }}
 
       - name: Publish Release Notes
