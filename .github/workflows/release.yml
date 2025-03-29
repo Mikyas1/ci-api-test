@@ -40,7 +40,8 @@ jobs:
           echo "Latest tag: $LATEST_TAG"
 
           # Remove "v" prefix
-          LATEST_VERSION=${LATEST_TAG#v}
+          # Remove ALL leading 'v' characters to get a clean version number
+          LATEST_VERSION=$(echo "$LATEST_TAG" | sed 's/^v*//')
 
           # Extract major, minor, patch
           IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
