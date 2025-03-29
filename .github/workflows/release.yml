@@ -2,6 +2,16 @@ name: release
 
 on:
   workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Select version bump type"
+        required: true
+        default: "minor"
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
 
 jobs:
   release:
@@ -11,16 +21,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Bump version
-        uses: phips28/gh-action-bump-version@master
-        with:
-          commit-message: "ci: bumps version to {{version}} [skip ci]"
-          default: minor
+      - name: Set up Git user
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
       - name: Extract latest version
-        run: echo VERSION=$(git describe --tags --abbrev=0) >> $GITHUB_ENV
+        run: echo VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0") >> $GITHUB_ENV
 
-      - name: Publish release notes
+      - name: Bump version
+        run: |
+          LATEST_TAG="${{ env.VERSION }}"
+          MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1 | tr -d 'v')
+          MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+          PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+
+          if [ "${{ inputs.version_type }}" = "major" ]; then
+            NEW_VERSION="v$((MAJOR + 1)).0.0"
+          elif [ "${{ inputs.version_type }}" = "minor" ]; then
+            NEW_VERSION="v$MAJOR.$((MINOR + 1)).0"
+          else
+            NEW_VERSION="v$MAJOR.$MINOR.$((PATCH + 1))"
+          fi
+
+          echo "New version: $NEW_VERSION"
+          echo "$NEW_VERSION" > VERSION
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Commit and tag new version
+        run: |
+          git add VERSION
+          git commit -m "ci: bump version to ${{ env.VERSION }}"
+          git tag ${{ env.VERSION }}
+          git push origin ${{ env.VERSION }}
+
+      - name: Publish Release Notes
         uses: release-drafter/release-drafter@v5
         with:
           config-name: release-drafter.yml
@@ -28,3 +63,5 @@ jobs:
           name: "${{ env.VERSION }}"
           tag: "${{ env.VERSION }}"
           version: "${{ env.VERSION }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
