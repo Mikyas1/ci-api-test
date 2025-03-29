@@ -52,13 +52,13 @@ jobs:
         env:
           PAT: ${{ secrets.GH_PAT }}
         run: |
-          git add VERSION
-          git commit -m "ci: bump version to ${{ env.VERSION }}"
-          git tag ${{ env.VERSION }}
-
           # Authenticate with PAT to push
           git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
           git push origin ${{ env.VERSION }}
+
+          git add VERSION
+          git commit -m "ci: bump version to ${{ env.VERSION }}"
+          git tag ${{ env.VERSION }}
 
       - name: Publish Release Notes
         uses: release-drafter/release-drafter@v5
