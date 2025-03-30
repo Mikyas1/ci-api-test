@@ -28,28 +28,31 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       # Step 4: Build the Docker image
-      - name: Build Docker image
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ env.VERSION }}
         run: |
-          docker build -t ${{ secrets.ECR_REPOSITORY }}:${{ env.VERSION }} .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      # Step 5: Push the Docker image to ECR
-      - name: Push Docker image to ECR
-        run: |
-          docker push ${{ secrets.ECR_REPOSITORY }}:${{ env.VERSION }}
-
-      # Step 6: Update the ECS service to use the new image
+      # Step 4: Update task definition image
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ci-api-task.json
+          task-definition-family: ci-api-task-definition
           container-name: ci-api-container
-          image: ${{ secrets.ECR_REPOSITORY }}:${{ env.VERSION }}
+          image: ${{ steps.build-image.outputs.image }}
 
-      - name: Deploy to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      # Step 5: Deploy new task definition
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          cluster: ci-api-cluster
-          service: ci-api-service
+          service: ci-api-cluster
+          cluster: ci-api-service
           wait-for-service-stability: true
