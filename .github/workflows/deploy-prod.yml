@@ -30,12 +30,12 @@ jobs:
       # Step 4: Build the Docker image
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.ECR_REPOSITORY }}:latest -t ${{ secrets.ECR_REPOSITORY }}:${{ env.VERSION }} .
+          docker build -t ${{ secrets.ECR_REPOSITORY }}:${{ env.VERSION }} .
 
       # Step 5: Push the Docker image to ECR
       - name: Push Docker image to ECR
         run: |
-          docker push ${{ secrets.ECR_REPOSITORY }}:${{ env.VERSION }} --all-tags
+          docker push ${{ secrets.ECR_REPOSITORY }}:${{ env.VERSION }}
 
       # Step 6: Update the ECS service to use the new image
       - name: Fill in the new image ID in the Amazon ECS task definition
