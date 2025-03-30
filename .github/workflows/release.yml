@@ -26,52 +26,47 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      - name: Get Latest Version Tag
-        id: get_version
-        run: |
-          git fetch --tags --force
+      - name: Get Latest Tag and Increment
+        id: versioning
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: tags } = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
 
-          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+            let latestTag = tags.length > 0 ? tags[0].name : "v0.1.0";
+            latestTag = latestTag.replace(/^v*/, ""); // Remove 'v' prefix
 
-          if [[ -z "$LATEST_TAG" ]]; then
-              LATEST_TAG="v0.1.0"
-          fi
+            let [major, minor, patch] = latestTag.split('.').map(Number);
+            let versionType = "${{ github.event.inputs.version_type }}";
 
-          echo "Latest tag: $LATEST_TAG"
+            switch (versionType) {
+              case "major": major++; minor = 0; patch = 0; break;
+              case "minor": minor++; patch = 0; break;
+              case "patch": patch++; break;
+              default: throw new Error("Invalid version type");
+            }
 
-          # Remove "v" prefix
-          # Remove ALL leading 'v' characters to get a clean version number
-          LATEST_VERSION=$(echo "$LATEST_TAG" | sed 's/^v*//')
+            let newTag = `v${major}.${minor}.${patch}`;
+            console.log(`New version: ${newTag}`);
 
-          # Extract major, minor, patch
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
-
-          # Determine which version to increment
-          case "${{ github.event.inputs.version_type }}" in
-              major) NEW_VERSION="v$((MAJOR+1)).0.0" ;;
-              minor) NEW_VERSION="v$MAJOR.$((MINOR+1)).0" ;;
-              patch) NEW_VERSION="v$MAJOR.$MINOR.$((PATCH+1))" ;;
-              *) echo "Invalid version type!"; exit 1 ;;
-          esac
-
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          echo "New version: $NEW_VERSION"
+            core.setOutput("new_tag", newTag);
 
       - name: Create and Push New Tag
         run: |
-          NEW_TAG="${{ env.NEW_VERSION }}"
-          git tag -a $NEW_TAG -m "Release $NEW_TAG"
-
-          git push origin $NEW_TAG
+          git tag -a ${{ steps.versioning.outputs.new_tag }} -m "Release ${{ steps.versioning.outputs.new_tag }}"
+          git push origin ${{ steps.versioning.outputs.new_tag }}
 
       - name: Publish Release Notes
         uses: release-drafter/release-drafter@v5
         with:
           config-name: release-drafter.yml
           publish: true
-          name: "${{ env.NEW_VERSION }}"
-          tag: "${{ env.NEW_VERSION }}"
-          version: "${{ env.NEW_VERSION }}"
+          name: "${{ steps.versioning.outputs.new_tag }}"
+          tag: "${{ steps.versioning.outputs.new_tag }}"
+          version: "${{ steps.versioning.outputs.new_tag }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -81,4 +76,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: Mikyas1/ci-api-test
           event-type: deploy
-          client-payload: '{"version": "${{ env.NEW_VERSION }}"}'
+          client-payload: '{"version": "${{ steps.versioning.outputs.new_tag }}"}'
