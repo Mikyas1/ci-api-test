@@ -31,11 +31,12 @@ jobs:
         run: |
           git fetch --tags --force
 
-          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+          # LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
 
-          if [[ -z "$LATEST_TAG" ]]; then
-              LATEST_TAG="v0.1.0"
-          fi
+          # if [[ -z "$LATEST_TAG" ]]; then
+          #     LATEST_TAG="v0.1.0"
+          # fi
+          LATEST_TAG="v3.0.0"
 
           echo "Latest tag: $LATEST_TAG"
 
@@ -74,3 +75,11 @@ jobs:
           version: "${{ env.NEW_VERSION }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dispatch Deploy
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: Mikyas1/ci-api-test
+          event-type: deploy
+          client-payload: '{"version": "${{ env.NEW_VERSION }}"}'
