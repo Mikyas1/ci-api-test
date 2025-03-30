@@ -35,24 +35,33 @@ jobs:
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ env.VERSION }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
-      # Step 4: Update task definition image
-      - name: Fill in the new image ID in the Amazon ECS task definition
+      # Step 5: Fetch the latest task definition
+      - name: Get latest task definition
+        run: |
+          aws ecs describe-task-definition --task-definition ci-api-task-definition \
+            --query taskDefinition > task-def.json
+
+      # Step 6: Update the Task Definition with the new image
+      - name: Update Task Definition Image
         id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition-family: ci-api-task-definition
-          container-name: ci-api-container
-          image: ${{ steps.build-image.outputs.image }}
+        env:
+          IMAGE_URI: ${{ env.IMAGE_URI }}
+        run: |
+          jq --arg new_image "$IMAGE_URI" \
+            '.containerDefinitions[0].image = $new_image | del(.taskDefinitionArn, .revision, .status, .registeredAt, .registeredBy)' \
+            task-def.json > task-definition.json
+          echo "TASK_DEF_FILE=task-definition.json" >> $GITHUB_ENV
 
-      # Step 5: Deploy new task definition
-      - name: Deploy Amazon ECS task definition
+      # Step 7: Deploy updated task definition
+      - name: Deploy to Amazon ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ci-api-cluster
-          cluster: ci-api-service
+          task-definition: ${{ env.TASK_DEF_FILE }}
+          cluster: ci-api-cluster
+          service: ci-api-service
           wait-for-service-stability: true
