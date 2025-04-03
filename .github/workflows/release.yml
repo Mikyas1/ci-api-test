@@ -74,6 +74,6 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: Mikyas1/ci-api-test
+          repository: ${{ github.repository }}
           event-type: deploy
           client-payload: '{"version": "${{ steps.versioning.outputs.new_tag }}"}'
